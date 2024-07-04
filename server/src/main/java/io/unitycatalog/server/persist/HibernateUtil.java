@@ -51,6 +51,7 @@ public class HibernateUtil {
             // Add annotated classes
             configuration.addAnnotatedClass(CatalogInfoDAO.class);
             configuration.addAnnotatedClass(SchemaInfoDAO.class);
+            configuration.addAnnotatedClass(StagingTableDAO.class);
             configuration.addAnnotatedClass(TableInfoDAO.class);
             configuration.addAnnotatedClass(ColumnInfoDAO.class);
             configuration.addAnnotatedClass(PropertyDAO.class);

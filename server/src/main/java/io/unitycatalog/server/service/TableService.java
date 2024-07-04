@@ -3,6 +3,8 @@ package io.unitycatalog.server.service;
 import io.unitycatalog.server.exception.GlobalExceptionHandler;
 import io.unitycatalog.server.model.CreateTable;
 import io.unitycatalog.server.model.TableInfo;
+import io.unitycatalog.server.model.CreateStagingTable;
+import io.unitycatalog.server.model.StagingTableInfo;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.annotation.*;
 import io.unitycatalog.server.persist.TableRepository;
@@ -15,6 +17,13 @@ public class TableService {
 
     private static final TableRepository databaseOperations = TableRepository.getInstance();
     public TableService() {}
+
+    @Post("/staging-tables")
+    public HttpResponse createStagingTable(CreateStagingTable createStagingTable) {
+        assert createStagingTable != null;
+        StagingTableInfo createdStagingTable = databaseOperations.createStagingTable(createStagingTable);
+        return HttpResponse.ofJson(createdStagingTable);
+    }
 
     @Post("/tables")
     public HttpResponse createTable(CreateTable createTable) {

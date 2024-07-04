@@ -1,5 +1,6 @@
 package io.unitycatalog.server.persist;
 
+import io.unitycatalog.server.model.*;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.services.s3.AmazonS3;
@@ -38,6 +39,11 @@ public class FileUtils {
     public static String createVolumeDirectory(String volumeName) {
         String absoluteUri = getDirectoryURI(volumeName);
         return createDirectory(absoluteUri).toString();
+    }
+
+    public static URI createTableDirectory(StagingTableInfo stagingTableInfo) {
+        return URI.create(createTableDirectory(stagingTableInfo.getCatalogName(),
+                stagingTableInfo.getSchemaName(), stagingTableInfo.getName()));
     }
 
     public static String createTableDirectory(String catalogName, String schemaName, String tableName) {

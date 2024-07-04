@@ -91,7 +91,6 @@ public class TableInfoConverter {
                 .columnCount(dto.getColumns() != null ? dto.getColumns().size() : 0)
                 .type(dto.getTableType().toString())
                 .dataSourceFormat(dto.getDataSourceFormat().toString())
-                .url(dto.getStorageLocation())
                 .build();
     }
 

@@ -22,8 +22,16 @@ public class TemporaryTableCredentialsService {
 
         // Check if table exists
         String tableStorageLocation = "";
-        TableInfo tableInfo = tableRepository.getTableById(tableId);
-        tableStorageLocation = tableInfo.getStorageLocation();
+        try {
+            StagingTableInfo tableInfo = tableRepository.getStagingTableById(tableId);
+            tableStorageLocation = tableInfo.getStagingLocation();
+        } catch (RuntimeException ignored) {
+            // try finding table in main table repository
+        }
+        if (tableStorageLocation.isEmpty()) {
+            TableInfo tableInfo = tableRepository.getTableById(tableId);
+            tableStorageLocation = tableInfo.getStorageLocation();
+        }
 
         // Generate temporary credentials
         if (tableStorageLocation == null || tableStorageLocation.isEmpty()) {
