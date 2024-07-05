@@ -96,8 +96,8 @@ public class CliUtils {
                 put(WRITE, new CliOptions(List.of(CliParams.FULL_NAME), List.of(CliParams.PATH)));
             }});
             put(TABLE, new HashMap<String, CliOptions>() {{
-                put(CREATE, new CliOptions(List.of(CliParams.FULL_NAME, CliParams.COLUMNS, CliParams.STORAGE_LOCATION),
-                        List.of(CliParams.DATA_SOURCE_FORMAT, CliParams.PROPERTIES)));
+                put(CREATE, new CliOptions(List.of(CliParams.FULL_NAME, CliParams.COLUMNS),
+                        List.of(CliParams.DATA_SOURCE_FORMAT, CliParams.PROPERTIES, CliParams.TABLE_TYPE, CliParams.STORAGE_LOCATION)));
                 put(LIST, new CliOptions(List.of(CliParams.CATALOG_NAME, CliParams.SCHEMA_NAME), List.of(CliParams.MAX_RESULTS)));
                 put(GET, new CliOptions(List.of(CliParams.FULL_NAME), List.of()));
                 put(READ, new CliOptions(List.of(CliParams.FULL_NAME), List.of(CliParams.MAX_RESULTS)));

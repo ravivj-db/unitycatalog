@@ -8,7 +8,7 @@ public enum CliParams {
     FULL_NAME("full_name" , "The full name of the table. The full name is the concatenation of the catalog name, schema name, and table/volume name separated by a dot. For example, catalog_name.schema_name.table_name.", "full_name"),
     STORAGE_LOCATION("storage_location" , "The storage location associated with the table. Need to be specified for external tables.", "storage_location"),
     MAX_RESULTS("max_results" , "The maximum number of results to return.", "max_results"),
-    TABLE_TYPE("table_type" , "The type of the table. Supported values are MANAGED and EXTERNAL. For create table only EXTERNAL tables are supported in this CLI example.", "table_type"),
+    TABLE_TYPE("table_type" , "The type of the table. Supported values are MANAGED and EXTERNAL.", "table_type"),
     DATA_SOURCE_FORMAT("format" , "The format of the data source. Supported values are DELTA, PARQUET, ORC, JSON, CSV, AVRO and TEXT.", "data_source_format"),
     COLUMNS("columns" , "The columns of the table. Each column spec should be in the sql-like format  \"column_name column_data_type\".Supported data types are BOOLEAN, BYTE, SHORT, INT, LONG, FLOAT, DOUBLE, DATE, TIMESTAMP, TIMESTAMP_NTZ, STRING, BINARY, DECIMAL. Multiple columns should be separated by a comma. For example: \"id INT, name STRING\".", "columns"),
     VOLUME_TYPE("volume_type" , "The type of the volume. Supported values are MANAGED and EXTERNAL.", "volume_type"),
