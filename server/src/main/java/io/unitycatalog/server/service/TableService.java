@@ -32,7 +32,6 @@ public class TableService {
         return HttpResponse.ofJson(createTableResponse);
     }
 
-
     @Get("/tables/{full_name}")
     public HttpResponse getTable(@Param("full_name") String fullName) {
         assert fullName != null;
@@ -63,6 +62,4 @@ public class TableService {
         databaseOperations.deleteTable(fullName);
         return HttpResponse.of(HttpStatus.OK);
     }
-
-
 }
