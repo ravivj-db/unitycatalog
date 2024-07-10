@@ -34,7 +34,7 @@ public class FileUtils {
         return properties.getProperty("storageRoot");
     }
 
-    private static String getDirectoryURI(String entityFullName) {
+    public static String getDirectoryURI(String entityFullName) {
         return getStorageRoot() + "/" + entityFullName.replace(".", "/");
     }
 
@@ -44,12 +44,11 @@ public class FileUtils {
     }
 
     public static URI createTableDirectory(StagingTableInfo stagingTableInfo) {
-        return URI.create(createTableDirectory(stagingTableInfo.getCatalogName(),
-                stagingTableInfo.getSchemaName(), stagingTableInfo.getName()));
+        return URI.create(createTableDirectory(stagingTableInfo.getId()));
     }
 
-    public static String createTableDirectory(String catalogName, String schemaName, String tableName) {
-        String absoluteUri = getDirectoryURI(catalogName + "." + schemaName + ".tables." + tableName);
+    public static String createTableDirectory(String tableId) {
+        String absoluteUri = getDirectoryURI("tables." + tableId);
         return createDirectory(absoluteUri).toString();
     }
 

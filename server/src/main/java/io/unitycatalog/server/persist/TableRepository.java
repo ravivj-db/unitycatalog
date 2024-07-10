@@ -156,7 +156,10 @@ public class TableRepository {
                 String schemaId = getSchemaId(session, stagingTableInfo.getCatalogName(),
                         stagingTableInfo.getSchemaName());
                 UUID tableId = UUID.randomUUID();
+                // set table id in staging table info
+                stagingTableInfo.setId(tableId.toString());
                 String stagingLocation = getEntityPath(stagingTableInfo);
+                stagingTableInfo.setStagingLocation(stagingLocation);
                 StagingTableDAO existing = findByStagingLocation(session, stagingLocation);
                 if (existing != null) {
                     throw new BaseException(ErrorCode.ALREADY_EXISTS,
@@ -174,8 +177,6 @@ public class TableRepository {
                 throw e;
             }
         }
-        stagingTableInfo.setStagingLocation(stagingTableDAO.getStagingLocation());
-        stagingTableInfo.setId(stagingTableDAO.getId().toString());
         return stagingTableInfo;
     }
 
@@ -242,8 +243,7 @@ public class TableRepository {
                     }
                 } else if (TableType.MANAGED.equals(tableInfo.getTableType())) {
                     // creating a new table location and setting that as the url
-                    String tableLocation = FileUtils.createTableDirectory(catalogName,
-                            schemaName, tableInfo.getName());
+                    String tableLocation = FileUtils.createTableDirectory(tableId);
                     // set location in both tableInfo and tableInfoDAO
                     tableInfoDAO.setUrl(tableLocation);
                     tableInfo.setStorageLocation(tableLocation);

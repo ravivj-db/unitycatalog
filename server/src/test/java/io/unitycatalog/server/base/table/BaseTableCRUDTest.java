@@ -6,12 +6,7 @@ import io.unitycatalog.server.base.BaseCRUDTest;
 import io.unitycatalog.server.base.ServerConfig;
 import io.unitycatalog.server.base.schema.SchemaOperations;
 import io.unitycatalog.server.persist.utils.FileUtils;
-import io.unitycatalog.server.persist.utils.HibernateUtils;
-import io.unitycatalog.server.persist.dao.ColumnInfoDAO;
-import io.unitycatalog.server.persist.dao.TableInfoDAO;
 import io.unitycatalog.server.utils.TestUtils;
-import org.hibernate.Session;
-import org.hibernate.Transaction;
 import org.junit.*;
 
 import java.io.IOException;
@@ -23,6 +18,15 @@ public abstract class BaseTableCRUDTest extends BaseCRUDTest {
     protected SchemaOperations schemaOperations;
     protected TableOperations tableOperations;
     private String schemaId = null;
+
+    ColumnInfo columnInfo1 = new ColumnInfo().name("as_int").typeText("INTEGER")
+            .typeJson("{\"type\": \"integer\"}")
+            .typeName(ColumnTypeName.INT).typePrecision(10).typeScale(0).position(0)
+            .comment("Integer column").nullable(true);
+    ColumnInfo columnInfo2 = new ColumnInfo().name("as_string").typeText("VARCHAR(255)")
+            .typeJson("{\"type\": \"string\", \"length\": \"255\"}")
+            .typeName(ColumnTypeName.STRING).position(1)
+            .comment("String column").nullable(true);
 
     protected abstract SchemaOperations createSchemaOperations(ServerConfig serverConfig);
     protected abstract TableOperations createTableOperations(ServerConfig serverConfig);
@@ -76,63 +80,23 @@ public abstract class BaseTableCRUDTest extends BaseCRUDTest {
         tableOperations.deleteTable(TestUtils.TABLE_FULL_NAME);
         assertThrows(Exception.class, () -> tableOperations.getTable(TestUtils.TABLE_FULL_NAME));
 
-        try (Session session = HibernateUtils.getSessionFactory().openSession()) {
-            Transaction tx = session.beginTransaction();
-
-            UUID tableId =  UUID.randomUUID();
-
-            TableInfoDAO managedTableInfo = TableInfoDAO.builder()
-                    .name(TestUtils.TABLE_NAME)
-                    .schemaId(UUID.fromString(schemaId))
-                    .comment(TestUtils.COMMENT)
-                    .url("/tmp/managedStagingLocation")
-                    .type(TableType.MANAGED.name())
-                    .dataSourceFormat(DataSourceFormat.DELTA.name())
-                    .id(tableId)
-                    .createdAt(new Date())
-                    .updatedAt(new Date())
-                    .build();
-
-
-            ColumnInfoDAO columnInfoDAO1 = ColumnInfoDAO.builder()
-                    .name("as_int")
-                    .typeText("INTEGER")
-                    .typeJson("{\"type\": \"integer\"}")
-                    .typeName(ColumnTypeName.INT.name())
-                    .typePrecision(10)
-                    .typeScale(0)
-                    .ordinalPosition((short)0)
-                    .comment("Integer column")
-                    .nullable(true)
-                    .table(managedTableInfo)
-                    .build();
-
-            ColumnInfoDAO columnInfoDAO2 = ColumnInfoDAO.builder()
-                    .name("as_string")
-                    .typeText("VARCHAR(255)")
-                    .typeJson("{\"type\": \"string\", \"length\": \"255\"}")
-                    .typeName(ColumnTypeName.STRING.name())
-                    .ordinalPosition((short)1)
-                    .comment("String column")
-                    .nullable(true)
-                    .table(managedTableInfo)
-                    .build();
-
-            managedTableInfo.setColumns(List.of(columnInfoDAO1, columnInfoDAO2));
-
-            session.persist(managedTableInfo);
-            session.flush();
-            tx.commit();
-        } catch (Exception e) {
-            fail(e.getMessage());
-        }
+        CreateTable createTableRequest = new CreateTable()
+                .name(TestUtils.TABLE_NAME)
+                .catalogName(TestUtils.CATALOG_NAME)
+                .schemaName(TestUtils.SCHEMA_NAME)
+                .columns(List.of(columnInfo1, columnInfo2))
+                .properties(TestUtils.PROPERTIES)
+                .comment(TestUtils.COMMENT)
+                .tableType(TableType.MANAGED)
+                .dataSourceFormat(DataSourceFormat.DELTA);
+        tableInfo = tableOperations.createTable(createTableRequest);
 
         System.out.println("Testing get managed table..");
         TableInfo managedTable = tableOperations.getTable(TestUtils.TABLE_FULL_NAME);
         assertEquals(TestUtils.TABLE_NAME, managedTable.getName());
         Assert.assertEquals(TestUtils.CATALOG_NAME, managedTable.getCatalogName());
         Assert.assertEquals(TestUtils.SCHEMA_NAME, managedTable.getSchemaName());
-        Assert.assertEquals(FileUtils.convertRelativePathToURI("/tmp/managedStagingLocation"), managedTable.getStorageLocation());
+        Assert.assertEquals("file:///tmp/tables/" + managedTable.getTableId() + "/", managedTable.getStorageLocation());
         Assert.assertEquals(TableType.MANAGED, managedTable.getTableType());
         Assert.assertEquals(DataSourceFormat.DELTA, managedTable.getDataSourceFormat());
         assertNotNull(managedTable.getCreatedAt());
@@ -144,7 +108,7 @@ public abstract class BaseTableCRUDTest extends BaseCRUDTest {
         assertEquals(TestUtils.TABLE_NAME, managedListTable.getName());
         Assert.assertEquals(TestUtils.CATALOG_NAME, managedListTable.getCatalogName());
         Assert.assertEquals(TestUtils.SCHEMA_NAME, managedListTable.getSchemaName());
-        Assert.assertEquals(FileUtils.convertRelativePathToURI("/tmp/managedStagingLocation"), managedListTable.getStorageLocation());
+        Assert.assertEquals("file:///tmp/tables/" + managedListTable.getTableId() + "/", managedListTable.getStorageLocation());
         Assert.assertEquals(TableType.MANAGED, managedListTable.getTableType());
         Assert.assertEquals(DataSourceFormat.DELTA, managedListTable.getDataSourceFormat());
         assertNotNull(managedListTable.getCreatedAt());
@@ -168,14 +132,6 @@ public abstract class BaseTableCRUDTest extends BaseCRUDTest {
     }
 
     protected TableInfo createDefaultTestingTable() throws IOException, ApiException {
-        ColumnInfo columnInfo1 = new ColumnInfo().name("as_int").typeText("INTEGER")
-                .typeJson("{\"type\": \"integer\"}")
-                .typeName(ColumnTypeName.INT).typePrecision(10).typeScale(0).position(0)
-                .comment("Integer column").nullable(true);
-        ColumnInfo columnInfo2 = new ColumnInfo().name("as_string").typeText("VARCHAR(255)")
-                .typeJson("{\"type\": \"string\", \"length\": \"255\"}")
-                .typeName(ColumnTypeName.STRING).position(1)
-                .comment("String column").nullable(true);
 
         CreateTable createTableRequest = new CreateTable()
                 .name(TestUtils.TABLE_NAME)
