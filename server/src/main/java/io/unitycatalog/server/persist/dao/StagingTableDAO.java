@@ -1,5 +1,7 @@
 package io.unitycatalog.server.persist.dao;
 
+import io.unitycatalog.server.model.CreateStagingTable;
+import io.unitycatalog.server.model.StagingTableInfo;
 import jakarta.persistence.*;
 
 import java.util.Date;
@@ -50,5 +52,47 @@ public class StagingTableDAO {
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "last_cleanup_at")
     private Date lastCleanupAt;
+
+    public static StagingTableInfo fromCreateTableRequest(CreateStagingTable createStagingTable) {
+        if (createStagingTable == null) {
+            return null;
+        }
+        return new StagingTableInfo().catalogName(createStagingTable.getCatalogName())
+                .schemaName(createStagingTable.getSchemaName())
+                .name(createStagingTable.getName())
+                .stagingLocation(createStagingTable.getStagingLocation());
+    }
+
+    public static StagingTableDAO fromStagingTableInfo(StagingTableInfo dto) {
+        if (dto == null) {
+            return null;
+        }
+        StagingTableDAO dao = StagingTableDAO.builder().stagingLocation(dto.getStagingLocation()).build();
+        if (dto.getId() != null) {
+            dao.setId(UUID.fromString(dto.getId()));
+        }
+        return dao;
+    }
+
+    public StagingTableInfo toStagingTableInfo() {
+        StagingTableInfo dto = new StagingTableInfo()
+                .stagingLocation(getStagingLocation());
+        if (getId() != null) {
+            dto.id(getId().toString());
+        }
+        return dto;
+    }
+
+    public  void setDefaultFields() {
+        setCreatedAt(new Date()); // Assuming current date for creation
+        setAccessedAt(new Date()); // Assuming current date for last access
+        setStageCommitted(false);
+        setStageCommittedAt(null);
+        setPurgeState((short)0);
+        setNumCleanupRetries((short)0);
+        setLastCleanupAt(null);
+    }
+
+
 
 }
