@@ -1,41 +1,40 @@
 package io.unitycatalog.server.utils;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import io.unitycatalog.server.exception.BaseException;
 import io.unitycatalog.server.persist.utils.FileUtils;
+import java.util.UUID;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-
 public class FileUtilsTest {
 
-    @Test
-    public void testFileUtils() {
+  @Test
+  public void testFileUtils() {
 
-        System.setProperty("storageRoot", "/tmp");
+    System.setProperty("storageRoot", "/tmp");
 
-        String tableId = UUID.randomUUID().toString();
+    String tableId = UUID.randomUUID().toString();
 
-        String tablePath = FileUtils.createTableDirectory(tableId);
+    String tablePath = FileUtils.createTableDirectory(tableId);
 
-        assertThat(tablePath).isEqualTo("file:///tmp/tables/" + tableId + "/");
+    assertThat(tablePath).isEqualTo("file:///tmp/tables/" + tableId + "/");
 
-        FileUtils.deleteDirectory(tablePath);
+    FileUtils.deleteDirectory(tablePath);
 
-        System.setProperty("storageRoot", "file:///tmp/random");
+    System.setProperty("storageRoot", "file:///tmp/random");
 
-        tablePath = FileUtils.createTableDirectory(tableId);
+    tablePath = FileUtils.createTableDirectory(tableId);
 
-        assertThat(tablePath).isEqualTo("file:///tmp/random/tables/" + tableId + "/");
+    assertThat(tablePath).isEqualTo("file:///tmp/random/tables/" + tableId + "/");
 
-        FileUtils.deleteDirectory(tablePath);
+    FileUtils.deleteDirectory(tablePath);
 
-        Assert.assertThrows(BaseException.class, () -> {
-            FileUtils.createTableDirectory("..");
+    Assert.assertThrows(
+        BaseException.class,
+        () -> {
+          FileUtils.createTableDirectory("..");
         });
-
-
-    }
+  }
 }
