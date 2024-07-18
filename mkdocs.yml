@@ -3,7 +3,7 @@ edit_uri: edit/main/docs/
 repo_name: unitycatalog/unitycatalog
 repo_url: https://github.com/unitycatalog/unitycatalog
 site_url: https://docs.unitycatalog.io
-site_description:  Open, Multi-modal Catalog for Data & AI 
+site_description: Open, Multi-modal Catalog for Data & AI
 site_author: unitycatalog
 
 nav:
@@ -12,7 +12,7 @@ nav:
   - Usage:
       - CLI: usage/cli.md
       - Tables:
-        - UniForm: usage/tables/uniform.md
+          - UniForm: usage/tables/uniform.md
       - Volumes: usage/volumes.md
       - Functions: usage/functions.md
       - Server: usage/server.md
@@ -23,6 +23,7 @@ nav:
 
 plugins:
   - search
+  - material-plausible
 
 theme:
   name: material
@@ -53,6 +54,23 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/unitycatalog/unitycatalog
+  analytics:
+    provider: plausible
+    domain: unitycatalog.io
+    feedback:
+      title: Was this page helpful?
+      ratings:
+        - icon: material/emoticon-happy-outline
+          name: This page was helpful
+          data: good
+          note: >-
+            Thanks for your feedback!
+
+        - icon: material/emoticon-sad-outline
+          name: This page could be improved
+          data: bad
+          note: >-
+            Thanks for your feedback!
 
 markdown_extensions:
   - admonition
