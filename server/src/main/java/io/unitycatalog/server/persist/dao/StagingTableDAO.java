@@ -22,6 +22,12 @@ public class StagingTableDAO {
   @Column(name = "id", nullable = false)
   private UUID id;
 
+  @Column(name = "schema_id", columnDefinition = "BINARY(16)")
+  private UUID schemaId;
+
+  @Column(name = "name")
+  private String name;
+
   @Lob
   @Column(name = "staging_location", nullable = false)
   private String stagingLocation;

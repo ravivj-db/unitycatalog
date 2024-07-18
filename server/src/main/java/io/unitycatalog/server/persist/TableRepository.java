@@ -69,6 +69,14 @@ public class TableRepository {
     return query.uniqueResult(); // Returns null if no result is found
   }
 
+  public StagingTableDAO findByTableName(Session session, UUID schemaId, String tableName) {
+    String hql = "FROM StagingTableDAO t WHERE t.schemaId = :schemaId AND t.name = :tableName";
+    Query<StagingTableDAO> query = session.createQuery(hql, StagingTableDAO.class);
+    query.setParameter("schemaId", schemaId);
+    query.setParameter("tableName", tableName);
+    return query.uniqueResult(); // Returns null if no result is found
+  }
+
   public StagingTableInfo createStagingTable(CreateStagingTable createStagingTable) {
     StagingTableInfo stagingTableInfo = StagingTableDAO.fromCreateTableRequest(createStagingTable);
     if (stagingTableInfo.getId() != null || stagingTableInfo.getStagingLocation() != null) {
@@ -84,6 +92,21 @@ public class TableRepository {
         String schemaId =
             getSchemaId(
                 session, stagingTableInfo.getCatalogName(), stagingTableInfo.getSchemaName());
+        // check if staging table or table by the same name already exists
+        StagingTableDAO existingStagingTable =
+            findByTableName(session, UUID.fromString(schemaId), stagingTableInfo.getName());
+        if (existingStagingTable != null) {
+          throw new BaseException(
+              ErrorCode.ALREADY_EXISTS,
+              "Staging table already exists: " + stagingTableInfo.getName());
+        }
+        TableInfoDAO existingTable =
+            findBySchemaIdAndName(session, schemaId, stagingTableInfo.getName());
+        if (existingTable != null) {
+          throw new BaseException(
+              ErrorCode.ALREADY_EXISTS, "Table already exists: " + stagingTableInfo.getName());
+        }
+
         UUID tableId = UUID.randomUUID();
         // set table id in staging table info
         stagingTableInfo.setId(tableId.toString());
@@ -95,6 +118,8 @@ public class TableRepository {
               ErrorCode.ALREADY_EXISTS, "Staging table already exists: " + stagingLocation);
         }
         stagingTableDAO.setId(tableId);
+        stagingTableDAO.setSchemaId(UUID.fromString(schemaId));
+        stagingTableDAO.setName(stagingTableInfo.getName());
         stagingTableDAO.setStagingLocation(stagingLocation);
         stagingTableDAO.setDefaultFields();
         session.persist(stagingTableDAO);
