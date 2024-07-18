@@ -73,7 +73,8 @@ public class TableInfoDAO {
         .comment(tableInfo.getComment())
         .createdAt(
             tableInfo.getCreatedAt() != null ? new Date(tableInfo.getCreatedAt()) : new Date())
-        .updatedAt(tableInfo.getUpdatedAt() != null ? new Date(tableInfo.getUpdatedAt()) : null)
+        .updatedAt(
+            tableInfo.getUpdatedAt() != null ? new Date(tableInfo.getUpdatedAt()) : new Date())
         .columnCount(tableInfo.getColumns() != null ? tableInfo.getColumns().size() : 0)
         .url(tableInfo.getStorageLocation() != null ? tableInfo.getStorageLocation() : null)
         .type(tableInfo.getTableType().toString())

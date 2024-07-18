@@ -10,6 +10,7 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import io.unitycatalog.server.exception.BaseException;
 import io.unitycatalog.server.exception.ErrorCode;
+import io.unitycatalog.server.model.*;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
@@ -41,9 +42,12 @@ public class FileUtils {
     return createDirectory(absoluteUri).toString();
   }
 
-  public static String createTableDirectory(
-      String catalogName, String schemaName, String tableName) {
-    String absoluteUri = getDirectoryURI(catalogName + "." + schemaName + ".tables." + tableName);
+  public static URI createTableDirectory(StagingTableInfo stagingTableInfo) {
+    return URI.create(createTableDirectory(stagingTableInfo.getId()));
+  }
+
+  public static String createTableDirectory(String tableId) {
+    String absoluteUri = getDirectoryURI("tables." + tableId);
     return createDirectory(absoluteUri).toString();
   }
 

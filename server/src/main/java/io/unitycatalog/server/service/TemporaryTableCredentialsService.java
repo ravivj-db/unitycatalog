@@ -19,11 +19,19 @@ public class TemporaryTableCredentialsService {
   public HttpResponse generateTemporaryTableCredential(
       GenerateTemporaryTableCredential generateTemporaryTableCredential) {
     String tableId = generateTemporaryTableCredential.getTableId();
-
     // Check if table exists
     String tableStorageLocation = "";
-    TableInfo tableInfo = TABLE_REPOSITORY.getTableById(tableId);
-    tableStorageLocation = tableInfo.getStorageLocation();
+
+    try {
+      StagingTableInfo tableInfo = TABLE_REPOSITORY.getStagingTableById(tableId);
+      tableStorageLocation = tableInfo.getStagingLocation();
+    } catch (RuntimeException ignored) {
+      // try finding table in main table repository
+    }
+    if (tableStorageLocation.isEmpty()) {
+      TableInfo tableInfo = TABLE_REPOSITORY.getTableById(tableId);
+      tableStorageLocation = tableInfo.getStorageLocation();
+    }
 
     // Generate temporary credentials
     if (tableStorageLocation == null || tableStorageLocation.isEmpty()) {

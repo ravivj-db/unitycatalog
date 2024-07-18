@@ -4,7 +4,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.annotation.*;
 import io.unitycatalog.server.exception.GlobalExceptionHandler;
+import io.unitycatalog.server.model.CreateStagingTable;
 import io.unitycatalog.server.model.CreateTable;
+import io.unitycatalog.server.model.StagingTableInfo;
 import io.unitycatalog.server.model.TableInfo;
 import io.unitycatalog.server.persist.TableRepository;
 import java.util.Optional;
@@ -14,7 +16,12 @@ public class TableService {
 
   private static final TableRepository TABLE_REPOSITORY = TableRepository.getInstance();
 
-  public TableService() {}
+  @Post("/staging-tables")
+  public HttpResponse createStagingTable(CreateStagingTable createStagingTable) {
+    assert createStagingTable != null;
+    StagingTableInfo createdStagingTable = TABLE_REPOSITORY.createStagingTable(createStagingTable);
+    return HttpResponse.ofJson(createdStagingTable);
+  }
 
   @Post("/tables")
   public HttpResponse createTable(CreateTable createTable) {

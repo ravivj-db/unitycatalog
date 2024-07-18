@@ -10,6 +10,7 @@ src/main/java/io/unitycatalog/client/ServerVariable.java
 src/main/java/io/unitycatalog/client/api/CatalogsApi.java
 src/main/java/io/unitycatalog/client/api/FunctionsApi.java
 src/main/java/io/unitycatalog/client/api/SchemasApi.java
+src/main/java/io/unitycatalog/client/api/StagingTablesApi.java
 src/main/java/io/unitycatalog/client/api/TablesApi.java
 src/main/java/io/unitycatalog/client/api/TemporaryTableCredentialsApi.java
 src/main/java/io/unitycatalog/client/api/TemporaryVolumeCredentialsApi.java
@@ -23,6 +24,7 @@ src/main/java/io/unitycatalog/client/model/CreateCatalog.java
 src/main/java/io/unitycatalog/client/model/CreateFunction.java
 src/main/java/io/unitycatalog/client/model/CreateFunctionRequest.java
 src/main/java/io/unitycatalog/client/model/CreateSchema.java
+src/main/java/io/unitycatalog/client/model/CreateStagingTable.java
 src/main/java/io/unitycatalog/client/model/CreateTable.java
 src/main/java/io/unitycatalog/client/model/CreateVolumeRequestContent.java
 src/main/java/io/unitycatalog/client/model/DataSourceFormat.java
@@ -44,6 +46,7 @@ src/main/java/io/unitycatalog/client/model/ListSchemasResponse.java
 src/main/java/io/unitycatalog/client/model/ListTablesResponse.java
 src/main/java/io/unitycatalog/client/model/ListVolumesResponseContent.java
 src/main/java/io/unitycatalog/client/model/SchemaInfo.java
+src/main/java/io/unitycatalog/client/model/StagingTableInfo.java
 src/main/java/io/unitycatalog/client/model/TableDependency.java
 src/main/java/io/unitycatalog/client/model/TableInfo.java
 src/main/java/io/unitycatalog/client/model/TableOperation.java
