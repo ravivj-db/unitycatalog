@@ -66,66 +66,72 @@ public class TableCli {
     CliUtils.postProcessAndPrintOutput(cmd, output, subCommand);
   }
 
-    private static String createTable(TablesApi apiClient, StagingTablesApi stagingTablesApi,
-                                      TemporaryTableCredentialsApi temporaryTableCredentialsApi, JSONObject json) throws JsonProcessingException, ApiException {
-        CliUtils.resolveFullNameToThreeLevelNamespace(json);
-        try {
-            json.putOnce(CliParams.TABLE_TYPE.getServerParam(), TableType.EXTERNAL.name());
-        } catch (JSONException e) {
-            // ignore (table type already set)
-        }
-        try {
-            json.putOnce(CliParams.DATA_SOURCE_FORMAT.getServerParam(), DataSourceFormat.DELTA.name());
-        } catch (JSONException e) {
-            // ignore (data source format already set)
-        }
-        String format = json.getString(CliParams.DATA_SOURCE_FORMAT.getServerParam());
-        // Set fields in json object for seamless deserialization
-        List<ColumnInfo> columnInfoList = CliUtils.parseColumns(json.getString(CliParams.COLUMNS.getServerParam()));
-        CreateTable createTable = new CreateTable()
-                .name(json.getString(CliParams.NAME.getServerParam()))
+  private static String createTable(
+      TablesApi apiClient,
+      StagingTablesApi stagingTablesApi,
+      TemporaryTableCredentialsApi temporaryTableCredentialsApi,
+      JSONObject json)
+      throws JsonProcessingException, ApiException {
+    CliUtils.resolveFullNameToThreeLevelNamespace(json);
+    try {
+      json.putOnce(CliParams.TABLE_TYPE.getServerParam(), TableType.EXTERNAL.name());
+    } catch (JSONException e) {
+      // ignore (table type already set)
+    }
+    try {
+      json.putOnce(CliParams.DATA_SOURCE_FORMAT.getServerParam(), DataSourceFormat.DELTA.name());
+    } catch (JSONException e) {
+      // ignore (data source format already set)
+    }
+    String format = json.getString(CliParams.DATA_SOURCE_FORMAT.getServerParam());
+    // Set fields in json object for seamless deserialization
+    List<ColumnInfo> columnInfoList =
+        CliUtils.parseColumns(json.getString(CliParams.COLUMNS.getServerParam()));
+    CreateTable createTable =
+        new CreateTable()
+            .name(json.getString(CliParams.NAME.getServerParam()))
+            .catalogName(json.getString(CliParams.CATALOG_NAME.getServerParam()))
+            .schemaName(json.getString(CliParams.SCHEMA_NAME.getServerParam()))
+            .columns(columnInfoList)
+            .properties(CliUtils.extractProperties(objectMapper, json))
+            .tableType(
+                TableType.valueOf(
+                    json.getString(CliParams.TABLE_TYPE.getServerParam()).toUpperCase()))
+            .dataSourceFormat(DataSourceFormat.valueOf(format.toUpperCase()));
+    if (createTable.getTableType() == TableType.EXTERNAL) {
+      if (!json.has(CliParams.STORAGE_LOCATION.getServerParam())) {
+        throw new CliException("Storage location is required for external tables");
+      }
+      createTable.storageLocation(json.getString(CliParams.STORAGE_LOCATION.getServerParam()));
+      handleTableStorageLocation(createTable.getStorageLocation(), columnInfoList);
+    } else {
+      // handle delta managed tables
+      String stagingTableId = null;
+      String stagingLocation = null;
+      // Create staging table if format is delta
+      if (DataSourceFormat.DELTA.name().equals(format.toUpperCase())) {
+        CreateStagingTable createStagingTable =
+            new CreateStagingTable()
                 .catalogName(json.getString(CliParams.CATALOG_NAME.getServerParam()))
                 .schemaName(json.getString(CliParams.SCHEMA_NAME.getServerParam()))
-                .columns(columnInfoList)
-                .properties(CliUtils.extractProperties(objectMapper, json))
-                .tableType(TableType.valueOf(
-                        json.getString(CliParams.TABLE_TYPE.getServerParam()).toUpperCase()))
-                .dataSourceFormat(DataSourceFormat.valueOf(format.toUpperCase()));
-        if (createTable.getTableType() == TableType.EXTERNAL) {
-            if (!json.has(CliParams.STORAGE_LOCATION.getServerParam())) {
-                throw new CliException("Storage location is required for external tables");
-            }
-            createTable.storageLocation(json.getString(CliParams.STORAGE_LOCATION.getServerParam()));
-            handleTableStorageLocation(createTable.getStorageLocation(), columnInfoList);
-        } else {
-            // handle delta managed tables
-            String stagingTableId = null;
-            String stagingLocation = null;
-            // Create staging table if format is delta
-            if (DataSourceFormat.DELTA.name().equals(format.toUpperCase())) {
-                CreateStagingTable createStagingTable = new CreateStagingTable()
-                        .catalogName(json.getString(CliParams.CATALOG_NAME.getServerParam()))
-                        .schemaName(json.getString(CliParams.SCHEMA_NAME.getServerParam()))
-                        .name(json.getString(CliParams.NAME.getServerParam()));
+                .name(json.getString(CliParams.NAME.getServerParam()));
 
-                StagingTableInfo stagingTableInfo = stagingTablesApi.createStagingTable(createStagingTable);
-                stagingTableId = stagingTableInfo.getId();
-                stagingLocation = stagingTableInfo.getStagingLocation();
-                if (stagingTableId == null || stagingLocation == null) {
-                    throw new CliException("Failed to create staging table");
-                }
-                AwsCredentials awsCredentials =
-                        getTemporaryTableCredentials(temporaryTableCredentialsApi,
-                                stagingTableId, TableOperation.READ_WRITE);
-                DeltaKernelUtils.createDeltaTable(
-                        stagingLocation,
-                        columnInfoList, awsCredentials);
-                createTable.setStorageLocation(stagingLocation);
-            }
+        StagingTableInfo stagingTableInfo = stagingTablesApi.createStagingTable(createStagingTable);
+        stagingTableId = stagingTableInfo.getId();
+        stagingLocation = stagingTableInfo.getStagingLocation();
+        if (stagingTableId == null || stagingLocation == null) {
+          throw new CliException("Failed to create staging table");
         }
-        TableInfo tableInfo = apiClient.createTable(createTable);
-        return objectWriter.writeValueAsString(tableInfo);
+        AwsCredentials awsCredentials =
+            getTemporaryTableCredentials(
+                temporaryTableCredentialsApi, stagingTableId, TableOperation.READ_WRITE);
+        DeltaKernelUtils.createDeltaTable(stagingLocation, columnInfoList, awsCredentials);
+        createTable.setStorageLocation(stagingLocation);
+      }
     }
+    TableInfo tableInfo = apiClient.createTable(createTable);
+    return objectWriter.writeValueAsString(tableInfo);
+  }
 
   private static Path getLocalPath(String path) {
     if (path.startsWith("file:")) {
