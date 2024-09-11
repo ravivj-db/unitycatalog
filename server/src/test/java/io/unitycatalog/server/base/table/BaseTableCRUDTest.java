@@ -15,12 +15,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
-import org.hibernate.Session;
-import org.hibernate.Transaction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -157,18 +153,17 @@ public abstract class BaseTableCRUDTest extends BaseCRUDTest {
   }
 
   private void testManagedTableRetrieval() throws ApiException, IOException {
-      CreateTable createTableRequest =
-              new CreateTable()
-                      .name(TestUtils.TABLE_NAME)
-                      .catalogName(TestUtils.CATALOG_NAME)
-                      .schemaName(TestUtils.SCHEMA_NAME)
-                      .columns(List.of(columnInfo1, columnInfo2))
-                      .properties(TestUtils.PROPERTIES)
-                      .comment(TestUtils.COMMENT)
-                      .tableType(TableType.MANAGED)
-                      .dataSourceFormat(DataSourceFormat.DELTA);
+    CreateTable createTableRequest =
+        new CreateTable()
+            .name(TestUtils.TABLE_NAME)
+            .catalogName(TestUtils.CATALOG_NAME)
+            .schemaName(TestUtils.SCHEMA_NAME)
+            .columns(List.of(columnInfo1, columnInfo2))
+            .properties(TestUtils.PROPERTIES)
+            .comment(TestUtils.COMMENT)
+            .tableType(TableType.MANAGED)
+            .dataSourceFormat(DataSourceFormat.DELTA);
     TableInfo tableInfo = tableOperations.createTable(createTableRequest);
-
 
     TableInfo managedTable = tableOperations.getTable(TestUtils.TABLE_FULL_NAME);
     assertThat(managedTable.getName()).isEqualTo(TestUtils.TABLE_NAME);

@@ -32,8 +32,10 @@ public class FileUtilsTest {
 
     FileUtils.deleteDirectory(tablePath);
 
-    assertThatThrownBy(() -> FileUtils.createTableDirectory(
-            new StagingTableInfo().catalogName("..").schemaName("schema").name("table")))
+    assertThatThrownBy(
+            () ->
+                FileUtils.createTableDirectory(
+                    new StagingTableInfo().catalogName("..").schemaName("schema").name("table")))
         .isInstanceOf(BaseException.class);
 
     assertThatThrownBy(

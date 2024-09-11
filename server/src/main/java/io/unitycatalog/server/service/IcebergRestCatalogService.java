@@ -24,10 +24,7 @@ import io.unitycatalog.server.service.iceberg.TableConfigService;
 import io.unitycatalog.server.utils.JsonUtils;
 import java.io.IOException;
 import java.util.List;
-<<<<<<< HEAD
-=======
 import java.util.Map;
->>>>>>> origin/main
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;

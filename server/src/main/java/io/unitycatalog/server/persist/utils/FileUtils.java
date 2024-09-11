@@ -12,7 +12,6 @@ import io.unitycatalog.server.exception.BaseException;
 import io.unitycatalog.server.exception.ErrorCode;
 import io.unitycatalog.server.model.*;
 import io.unitycatalog.server.utils.Constants;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
