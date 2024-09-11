@@ -78,8 +78,12 @@ public class VolumeCli {
       throws JsonProcessingException, ApiException {
     String catalogName = json.getString(CliParams.CATALOG_NAME.getServerParam());
     String schemaName = json.getString(CliParams.SCHEMA_NAME.getServerParam());
+    int maxResults = 100;
+    if (json.has(CliParams.MAX_RESULTS.getServerParam())) {
+      maxResults = json.getInt(CliParams.MAX_RESULTS.getServerParam());
+    }
     return objectWriter.writeValueAsString(
-        volumesApi.listVolumes(catalogName, schemaName, 100, null).getVolumes());
+        volumesApi.listVolumes(catalogName, schemaName, maxResults, null).getVolumes());
   }
 
   private static String getVolume(VolumesApi volumesApi, JSONObject json)
@@ -227,8 +231,17 @@ public class VolumeCli {
       throws JsonProcessingException, ApiException {
     String volumeFullName = json.getString(CliParams.FULL_NAME.getServerParam());
     json.remove(CliParams.FULL_NAME.getServerParam());
-    UpdateVolumeRequestContent updateVolumeRequest;
-    updateVolumeRequest = objectMapper.readValue(json.toString(), UpdateVolumeRequestContent.class);
+    if (json.length() == 0) {
+      List<CliParams> optionalParams =
+          CliUtils.cliOptions.get(CliUtils.VOLUME).get(CliUtils.UPDATE).getOptionalParams();
+      String errorMessage = "No parameters to update, please provide one of:";
+      for (CliParams param : optionalParams) {
+        errorMessage += "\n  --" + param.val();
+      }
+      throw new CliException(errorMessage);
+    }
+    UpdateVolumeRequestContent updateVolumeRequest =
+        objectMapper.readValue(json.toString(), UpdateVolumeRequestContent.class);
     return objectWriter.writeValueAsString(
         apiClient.updateVolume(volumeFullName, updateVolumeRequest));
   }

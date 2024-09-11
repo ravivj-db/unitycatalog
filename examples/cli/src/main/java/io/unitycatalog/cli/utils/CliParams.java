@@ -1,16 +1,20 @@
 package io.unitycatalog.cli.utils;
 
 public enum CliParams {
+  IDENTITY_TOKEN("identity_token", "Identity token to authorize", "identityToken"),
   NAME("name", "The name of the entity.", "name"),
   SCHEMA_NAME("schema", "The name of the schema.", "schema_name"),
   CATALOG_NAME("catalog", "The name of the catalog.", "catalog_name"),
+  MODEL_NAME("model_name", "The name of the registered model.", "model_name"),
+  RUN_ID("run_id", "The run id that generated a model version.", "run_id"),
+  SOURCE("source", "The URI location of the source artifacts for the model version.", "source"),
   PROPERTIES(
       "properties",
       "The properties of the entity. Need to be in json format. For example: \"{\"key1\": \"value1\", \"key2\": \"value2\"}\".",
       "properties"),
   FULL_NAME(
       "full_name",
-      "The full name of the table. The full name is the concatenation of the catalog name, schema name, and table/volume name separated by a dot. For example, catalog_name.schema_name.table_name.",
+      "The full name in the format catalog_name.schema_name for schema, or catalog_name.schema_name.table_name for table/function/volume",
       "full_name"),
   STORAGE_LOCATION(
       "storage_location",
@@ -41,9 +45,25 @@ public enum CliParams {
   LANGUAGE("language", "The language of the function", "external_language"),
   COMMENT("comment", "Comment/Description of the entity.", "comment"),
   SERVER("server", "UC Server to connect to. Default is reference server.", "server"),
-  AUTH_TOKEN("auth_token", "PAT token to authorize uc requests", "auth_token"),
-  OUTPUT("output", "To indicate CLI output format preference", "output"),
-  FORCE("force", "To force delete the entity", "force");
+  AUTH_TOKEN("auth_token", "PAT token to authorize uc requests.", "auth_token"),
+  OUTPUT(
+      "output",
+      "To indicate CLI output format preference. Supported values are json and jsonPretty.",
+      "output"),
+  VERSION("version", "Version number of a registered model entity.", "version"),
+  FORCE("force", "To force delete the entity", "force"),
+  RESOURCE_TYPE("resource_type", "The type of the resource", "resource_type"),
+  PRINCIPAL("principal", "The target principal of the permission change", "principal"),
+  PRIVILEGE("privilege", "The privilege to grant or revoke", "privilege"),
+  ID("id", "The unique id of the user", "id"),
+  EXTERNAL_ID("external_id", "The identity provider's id for the user", "externalId"),
+  EMAIL("email", "The email address for the user", "email"),
+  FILTER("filter", "Query by which the results have to be filtered", "filter"),
+  START_INDEX(
+      "startIndex",
+      "Specifies the index of the first result. First item is number 1",
+      "startIndex"),
+  COUNT("count", "Desired number of results per page", "count");
   private final String value;
   private final String helpMessage;
   private final String serverParam;

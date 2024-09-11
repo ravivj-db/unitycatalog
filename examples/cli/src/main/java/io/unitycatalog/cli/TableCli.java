@@ -17,7 +17,6 @@ import io.unitycatalog.client.api.StagingTablesApi;
 import io.unitycatalog.client.api.TablesApi;
 import io.unitycatalog.client.api.TemporaryTableCredentialsApi;
 import io.unitycatalog.client.model.*;
-import java.io.*;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -167,12 +166,16 @@ public class TableCli {
 
   private static String listTables(TablesApi tablesApi, JSONObject json)
       throws JsonProcessingException, ApiException {
+    int maxResults = 100;
+    if (json.has(CliParams.MAX_RESULTS.getServerParam())) {
+      maxResults = json.getInt(CliParams.MAX_RESULTS.getServerParam());
+    }
     return objectWriter.writeValueAsString(
         tablesApi
             .listTables(
                 json.getString(CliParams.CATALOG_NAME.getServerParam()),
                 json.getString(CliParams.SCHEMA_NAME.getServerParam()),
-                100,
+                maxResults,
                 null)
             .getTables());
   }

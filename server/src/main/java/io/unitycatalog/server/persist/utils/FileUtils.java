@@ -11,6 +11,8 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import io.unitycatalog.server.exception.BaseException;
 import io.unitycatalog.server.exception.ErrorCode;
 import io.unitycatalog.server.model.*;
+import io.unitycatalog.server.utils.Constants;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
@@ -187,11 +189,16 @@ public class FileUtils {
     if (url == null) {
       return null;
     }
-    if (url.startsWith("s3://")) {
+    if (isSupportedCloudStorageUri(url)) {
       return url;
     } else {
       return adjustFileUri(createURI(url)).toString();
     }
+  }
+
+  public static boolean isSupportedCloudStorageUri(String url) {
+    String scheme = URI.create(url).getScheme();
+    return scheme != null && Constants.SUPPORTED_SCHEMES.contains(scheme);
   }
 
   private static void validateURI(URI uri) {

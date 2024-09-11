@@ -122,7 +122,7 @@ You should see something that looks like:
 
 The `routine definition` is probably most helpful here: `t = x + y + z\nreturn t `
 
-It looks like this functions takes in 3 arguments and returns their sum. The `DATA_TYPE` field tells us that the inputs should be of `INT` data type.
+It looks like this functions takes in 3 arguments and returns their sum. The `DATA_TYPE` field tells us that the output should be of `INT` data type.
 
 ## Calling Functions from Unity Catalog
 
@@ -148,7 +148,7 @@ We'll start with a basic example using only scalar values.
 
 Suppose you want to register the following function to Unity Catalog: `c = a * b`
 
-To do so, define a new Function by its full name, specify the data type of the output, the input parameters and their data types, and
+To do so, define a new Function by its full name, specify the data type of the output, the input parameters and their data types, and define the function.
 
 ```sh
 bin/uc function create --full_name unity.default.my_function \
@@ -236,7 +236,7 @@ bin/uc function create --full_name unity.default.myPythonFunction --data_type IN
 And then call it with:
 
 ```sh
-bin/uc function call --full_name unity.default.myPythonFunction2 --input_params "6,1"
+bin/uc function call --full_name unity.default.myPythonFunction --input_params "6,1"
 ```
 
 This will simulate rolling a single die with 6 sides.
@@ -248,8 +248,8 @@ This will simulate rolling a single die with 6 sides.
 Required Parameters:
 
 - `--full_name`: The full name of the table. The full name is the concatenation of the catalog name, schema name, and table/volume name separated by a dot. For example, catalog_name.schema_name.table_name.
-- `--input_params`: The input parameters of the function, #ADD SYNTAX/FORMAT
-- `--data_type`: The data type of the function, #ADD REF TO DTYPES
+- `--input_params`: The input parameters of the function, 
+- `--data_type`: The data type of the function.
 
 Optional Parameters:
 

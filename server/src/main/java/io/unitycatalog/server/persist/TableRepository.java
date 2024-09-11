@@ -9,6 +9,7 @@ import io.unitycatalog.server.persist.dao.StagingTableDAO;
 import io.unitycatalog.server.persist.dao.TableInfoDAO;
 import io.unitycatalog.server.persist.utils.FileUtils;
 import io.unitycatalog.server.persist.utils.HibernateUtils;
+import io.unitycatalog.server.persist.utils.PagedListingHelper;
 import io.unitycatalog.server.persist.utils.RepositoryUtils;
 import io.unitycatalog.server.utils.Constants;
 import io.unitycatalog.server.utils.ValidationUtils;
@@ -25,9 +26,9 @@ public class TableRepository {
   private static final TableRepository INSTANCE = new TableRepository();
   private static final Logger LOGGER = LoggerFactory.getLogger(TableRepository.class);
   private static final SessionFactory SESSION_FACTORY = HibernateUtils.getSessionFactory();
-  private static final CatalogRepository CATALOG_REPOSITORY = CatalogRepository.getInstance();
   private static final SchemaRepository SCHEMA_REPOSITORY = SchemaRepository.getInstance();
-  public static final Integer DEFAULT_PAGE_SIZE = 100;
+  private static final PagedListingHelper<TableInfoDAO> LISTING_HELPER =
+      new PagedListingHelper<>(TableInfoDAO.class);
 
   private TableRepository() {}
 
@@ -89,12 +90,12 @@ public class TableRepository {
       Transaction tx = session.beginTransaction();
       try {
         // check if catalog and schema exist first
-        String schemaId =
-            getSchemaId(
+        UUID schemaId =
+            RepositoryUtils.getSchemaId(
                 session, stagingTableInfo.getCatalogName(), stagingTableInfo.getSchemaName());
         // check if staging table or table by the same name already exists
         StagingTableDAO existingStagingTable =
-            findByTableName(session, UUID.fromString(schemaId), stagingTableInfo.getName());
+            findByTableName(session, schemaId, stagingTableInfo.getName());
         if (existingStagingTable != null) {
           throw new BaseException(
               ErrorCode.ALREADY_EXISTS,
@@ -118,7 +119,7 @@ public class TableRepository {
               ErrorCode.ALREADY_EXISTS, "Staging table already exists: " + stagingLocation);
         }
         stagingTableDAO.setId(tableId);
-        stagingTableDAO.setSchemaId(UUID.fromString(schemaId));
+        stagingTableDAO.setSchemaId(schemaId);
         stagingTableDAO.setName(stagingTableInfo.getName());
         stagingTableDAO.setStagingLocation(stagingLocation);
         stagingTableDAO.setDefaultFields();
@@ -199,7 +200,7 @@ public class TableRepository {
 
   private TableInfoDAO findTable(
       Session session, String catalogName, String schemaName, String tableName) {
-    String schemaId = getSchemaId(session, catalogName, schemaName);
+    UUID schemaId = getSchemaId(session, catalogName, schemaName);
     return findBySchemaIdAndName(session, schemaId, tableName);
   }
 
@@ -229,7 +230,7 @@ public class TableRepository {
     try (Session session = SESSION_FACTORY.openSession()) {
       String catalogName = tableInfo.getCatalogName();
       String schemaName = tableInfo.getSchemaName();
-      String schemaId = getSchemaId(session, catalogName, schemaName);
+      UUID schemaId = getSchemaId(session, catalogName, schemaName);
       tx = session.beginTransaction();
 
       try {
@@ -239,7 +240,7 @@ public class TableRepository {
           throw new BaseException(ErrorCode.ALREADY_EXISTS, "Table already exists: " + fullName);
         }
         TableInfoDAO tableInfoDAO = TableInfoDAO.from(tableInfo);
-        tableInfoDAO.setSchemaId(UUID.fromString(schemaId));
+        tableInfoDAO.setSchemaId(schemaId);
         String tableId = UUID.randomUUID().toString();
         if (TableType.MANAGED.equals(tableInfo.getTableType())
             && DataSourceFormat.DELTA.equals(tableInfo.getDataSourceFormat())) {
@@ -288,7 +289,13 @@ public class TableRepository {
         tableInfo.setCreatedAt(tableInfoDAO.getCreatedAt().getTime());
         tableInfo.setUpdatedAt(tableInfoDAO.getUpdatedAt().getTime());
         // create columns
-        tableInfoDAO.getColumns().forEach(c -> c.setTable(tableInfoDAO));
+        tableInfoDAO
+            .getColumns()
+            .forEach(
+                c -> {
+                  c.setId(UUID.randomUUID());
+                  c.setTable(tableInfoDAO);
+                });
         // create properties
         PropertyDAO.from(tableInfo.getProperties(), tableInfoDAO.getId(), Constants.TABLE)
             .forEach(session::persist);
@@ -304,15 +311,16 @@ public class TableRepository {
       if (e instanceof BaseException) {
         throw e;
       }
-      throw new BaseException(ErrorCode.INTERNAL, "Error creating table: " + fullName, e);
+      throw new BaseException(
+          ErrorCode.INTERNAL, "Error creating table: " + fullName + ". " + e.getMessage(), e);
     }
     return tableInfo;
   }
 
-  public TableInfoDAO findBySchemaIdAndName(Session session, String schemaId, String name) {
+  public TableInfoDAO findBySchemaIdAndName(Session session, UUID schemaId, String name) {
     String hql = "FROM TableInfoDAO t WHERE t.schemaId = :schemaId AND t.name = :name";
     Query<TableInfoDAO> query = session.createQuery(hql, TableInfoDAO.class);
-    query.setParameter("schemaId", UUID.fromString(schemaId));
+    query.setParameter("schemaId", schemaId);
     query.setParameter("name", name);
     LOGGER.debug("Finding table by schemaId: " + schemaId + " and name: " + name);
     return query.uniqueResult(); // Returns null if no result is found
@@ -322,27 +330,12 @@ public class TableRepository {
     return tableInfo.getCatalogName() + "." + tableInfo.getSchemaName() + "." + tableInfo.getName();
   }
 
-  public String getSchemaId(Session session, String catalogName, String schemaName) {
+  public UUID getSchemaId(Session session, String catalogName, String schemaName) {
     SchemaInfoDAO schemaInfo = SCHEMA_REPOSITORY.getSchemaDAO(session, catalogName, schemaName);
     if (schemaInfo == null) {
       throw new BaseException(ErrorCode.NOT_FOUND, "Schema not found: " + schemaName);
     }
-    return schemaInfo.getId().toString();
-  }
-
-  public static String getNextPageToken(List<TableInfoDAO> tables, Integer pageSize) {
-    if (tables == null || tables.isEmpty() || tables.size() < pageSize) {
-      return null;
-    }
-    // return the last table name
-    return tables.get(tables.size() - 1).getName();
-  }
-
-  public static Integer getPageSize(Optional<Integer> maxResults) {
-    return maxResults
-        .filter(x -> (x > 0))
-        .map(x -> Math.min(x, DEFAULT_PAGE_SIZE))
-        .orElse(DEFAULT_PAGE_SIZE);
+    return schemaInfo.getId();
   }
 
   /**
@@ -351,7 +344,7 @@ public class TableRepository {
    * @param catalogName
    * @param schemaName
    * @param maxResults
-   * @param nextPageToken
+   * @param pageToken
    * @param omitProperties
    * @param omitColumns
    * @return
@@ -360,22 +353,22 @@ public class TableRepository {
       String catalogName,
       String schemaName,
       Optional<Integer> maxResults,
-      Optional<String> nextPageToken,
+      Optional<String> pageToken,
       Boolean omitProperties,
       Boolean omitColumns) {
     try (Session session = SESSION_FACTORY.openSession()) {
       session.setDefaultReadOnly(true);
       Transaction tx = session.beginTransaction();
       try {
-        String schemaId = getSchemaId(session, catalogName, schemaName);
+        UUID schemaId = getSchemaId(session, catalogName, schemaName);
         ListTablesResponse response =
             listTables(
                 session,
-                UUID.fromString(schemaId),
+                schemaId,
                 catalogName,
                 schemaName,
                 maxResults,
-                nextPageToken,
+                pageToken,
                 omitProperties,
                 omitColumns);
         tx.commit();
@@ -395,25 +388,13 @@ public class TableRepository {
       String catalogName,
       String schemaName,
       Optional<Integer> maxResults,
-      Optional<String> nextPageToken,
+      Optional<String> pageToken,
       Boolean omitProperties,
       Boolean omitColumns) {
+    List<TableInfoDAO> tableInfoDAOList =
+        LISTING_HELPER.listEntity(session, maxResults, pageToken, schemaId);
+    String nextPageToken = LISTING_HELPER.getNextPageToken(tableInfoDAOList, maxResults);
     List<TableInfo> result = new ArrayList<>();
-    String returnNextPageToken;
-    if (maxResults.isPresent() && maxResults.get() < 0) {
-      throw new BaseException(
-          ErrorCode.INVALID_ARGUMENT, "maxResults must be greater than or equal to 0");
-    }
-    Integer pageSize = getPageSize(maxResults);
-    String hql =
-        "FROM TableInfoDAO t WHERE t.schemaId = :schemaId and "
-            + "(t.name > :pageToken OR :pageToken is null) order by t.name asc";
-    Query<TableInfoDAO> query = session.createQuery(hql, TableInfoDAO.class);
-    query.setParameter("schemaId", schemaId);
-    query.setParameter("pageToken", nextPageToken.orElse(null));
-    query.setMaxResults(pageSize);
-    List<TableInfoDAO> tableInfoDAOList = query.list();
-    returnNextPageToken = getNextPageToken(tableInfoDAOList, pageSize);
     for (TableInfoDAO tableInfoDAO : tableInfoDAOList) {
       TableInfo tableInfo = tableInfoDAO.toTableInfo(!omitColumns);
       if (!omitProperties) {
@@ -424,7 +405,7 @@ public class TableRepository {
       tableInfo.setSchemaName(schemaName);
       result.add(tableInfo);
     }
-    return new ListTablesResponse().tables(result).nextPageToken(returnNextPageToken);
+    return new ListTablesResponse().tables(result).nextPageToken(nextPageToken);
   }
 
   public void deleteTable(String fullName) {
@@ -438,8 +419,8 @@ public class TableRepository {
       String schemaName = parts[1];
       String tableName = parts[2];
       try {
-        String schemaId = getSchemaId(session, catalogName, schemaName);
-        deleteTable(session, UUID.fromString(schemaId), tableName);
+        UUID schemaId = getSchemaId(session, catalogName, schemaName);
+        deleteTable(session, schemaId, tableName);
         tx.commit();
       } catch (RuntimeException e) {
         if (tx != null && tx.getStatus().canRollback()) {
@@ -451,7 +432,7 @@ public class TableRepository {
   }
 
   public void deleteTable(Session session, UUID schemaId, String tableName) {
-    TableInfoDAO tableInfoDAO = findBySchemaIdAndName(session, schemaId.toString(), tableName);
+    TableInfoDAO tableInfoDAO = findBySchemaIdAndName(session, schemaId, tableName);
     if (tableInfoDAO == null) {
       throw new BaseException(ErrorCode.NOT_FOUND, "Table not found: " + tableName);
     }
