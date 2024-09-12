@@ -64,8 +64,7 @@ public class StagingTableDAO {
     return new StagingTableInfo()
         .catalogName(createStagingTable.getCatalogName())
         .schemaName(createStagingTable.getSchemaName())
-        .name(createStagingTable.getName())
-        .stagingLocation(createStagingTable.getStagingLocation());
+        .name(createStagingTable.getName());
   }
 
   public static StagingTableDAO fromStagingTableInfo(StagingTableInfo dto) {
