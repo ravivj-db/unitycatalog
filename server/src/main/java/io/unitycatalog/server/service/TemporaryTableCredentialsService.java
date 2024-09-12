@@ -3,6 +3,8 @@ package io.unitycatalog.server.service;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.Post;
+import io.unitycatalog.server.exception.BaseException;
+import io.unitycatalog.server.exception.ErrorCode;
 import io.unitycatalog.server.exception.GlobalExceptionHandler;
 import io.unitycatalog.server.model.GenerateTemporaryTableCredential;
 import io.unitycatalog.server.model.TableInfo;
@@ -32,9 +34,17 @@ public class TemporaryTableCredentialsService {
   public HttpResponse generateTemporaryTableCredential(
       GenerateTemporaryTableCredential generateTemporaryTableCredential) {
     String tableId = generateTemporaryTableCredential.getTableId();
-    TableInfo tableInfo = TABLE_REPOSITORY.getTableById(tableId);
+    String tableStorageLocation = null;
+    try {
+      tableStorageLocation = TABLE_REPOSITORY.getTableById(tableId).getStorageLocation();
+    } catch (BaseException e) {
+      if (e.getErrorCode().equals(ErrorCode.NOT_FOUND)) {
+        tableStorageLocation = TABLE_REPOSITORY.getStagingTableById(tableId).getStagingLocation();
+      }
+    }
 
-    return HttpResponse.ofJson(credentialOps.vendCredentialForTable(tableInfo, tableOperationToPrivileges(generateTemporaryTableCredential.getOperation())));
+    return HttpResponse.ofJson(credentialOps.vendCredentialForTable(tableStorageLocation,
+            tableOperationToPrivileges(generateTemporaryTableCredential.getOperation())));
   }
 
   private Set<CredentialContext.Privilege> tableOperationToPrivileges(TableOperation tableOperation) {

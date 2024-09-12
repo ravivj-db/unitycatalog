@@ -67,7 +67,8 @@ public class TableInfoDAO extends IdentifiableDAO {
         .comment(tableInfo.getComment())
         .createdAt(
             tableInfo.getCreatedAt() != null ? new Date(tableInfo.getCreatedAt()) : new Date())
-        .updatedAt(tableInfo.getUpdatedAt() != null ? new Date(tableInfo.getUpdatedAt()) : null)
+        .updatedAt(
+            tableInfo.getUpdatedAt() != null ? new Date(tableInfo.getUpdatedAt()) : new Date())
         .columnCount(tableInfo.getColumns() != null ? tableInfo.getColumns().size() : 0)
         .url(tableInfo.getStorageLocation() != null ? tableInfo.getStorageLocation() : null)
         .type(tableInfo.getTableType().toString())
@@ -84,7 +85,7 @@ public class TableInfoDAO extends IdentifiableDAO {
             .name(getName())
             .tableType(TableType.valueOf(type))
             .dataSourceFormat(DataSourceFormat.valueOf(dataSourceFormat))
-            .storageLocation(FileUtils.convertRelativePathToURI(url))
+            .storageLocation(FileUtils.toStandardizedURIString(url))
             .comment(comment)
             .createdAt(createdAt != null ? createdAt.getTime() : null)
             .updatedAt(updatedAt != null ? updatedAt.getTime() : null);

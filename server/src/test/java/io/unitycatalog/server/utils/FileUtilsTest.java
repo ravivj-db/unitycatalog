@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.unitycatalog.server.exception.BaseException;
+import io.unitycatalog.server.model.StagingTableInfo;
 import io.unitycatalog.server.persist.utils.FileUtils;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 public class FileUtilsTest {
@@ -14,27 +16,19 @@ public class FileUtilsTest {
 
     System.setProperty("storageRoot", "/tmp");
 
-    String tablePath = FileUtils.createTableDirectory("catalog", "schema", "table");
-    String volumePath = FileUtils.createVolumeDirectory("volume");
+    String tableId = UUID.randomUUID().toString();
 
-    assertThat(tablePath).isEqualTo("file:///tmp/catalog/schema/tables/table/");
-    assertThat(volumePath).isEqualTo("file:///tmp/volume/");
+    String tablePath = FileUtils.createTableDirectory(tableId);
 
-    FileUtils.deleteDirectory(tablePath);
-    FileUtils.deleteDirectory(volumePath);
+    assertThat(tablePath).isEqualTo("file:///tmp/tables/" + tableId);
 
     System.setProperty("storageRoot", "file:///tmp/random");
 
-    tablePath = FileUtils.createTableDirectory("catalog", "schema", "table");
-    volumePath = FileUtils.createVolumeDirectory("volume");
+    tablePath = FileUtils.createTableDirectory(tableId);
 
-    assertThat(tablePath).isEqualTo("file:///tmp/random/catalog/schema/tables/table/");
-    assertThat(volumePath).isEqualTo("file:///tmp/random/volume/");
+    assertThat(tablePath).isEqualTo("file:///tmp/random/tables/" + tableId);
 
-    FileUtils.deleteDirectory(tablePath);
-    FileUtils.deleteDirectory(volumePath);
-
-    assertThatThrownBy(() -> FileUtils.createTableDirectory("..", "schema", "table"))
+    assertThatThrownBy(() -> FileUtils.createTableDirectory(new StagingTableInfo().id("..")))
         .isInstanceOf(BaseException.class);
 
     assertThatThrownBy(

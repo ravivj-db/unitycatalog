@@ -5,6 +5,7 @@ import io.unitycatalog.server.exception.ErrorCode;
 import io.unitycatalog.server.model.*;
 import io.unitycatalog.server.persist.dao.PropertyDAO;
 import io.unitycatalog.server.persist.dao.SchemaInfoDAO;
+import io.unitycatalog.server.persist.dao.StagingTableDAO;
 import io.unitycatalog.server.persist.dao.TableInfoDAO;
 import io.unitycatalog.server.persist.utils.FileUtils;
 import io.unitycatalog.server.persist.utils.HibernateUtils;
@@ -35,6 +36,105 @@ public class TableRepository {
     return INSTANCE;
   }
 
+  private String getEntityPath(StagingTableInfo tableInfo) {
+    return FileUtils.createTableDirectory(tableInfo);
+  }
+
+  public StagingTableInfo getStagingTable(String stagingPath) {
+    LOGGER.debug("Getting staging table: " + stagingPath);
+    try (Session session = SESSION_FACTORY.openSession()) {
+      StagingTableDAO stagingTableDAO = findByStagingLocation(session, stagingPath);
+      if (stagingTableDAO == null) {
+        throw new BaseException(ErrorCode.NOT_FOUND, "Staging table not found: " + stagingPath);
+      }
+      return stagingTableDAO.toStagingTableInfo();
+    }
+  }
+
+  public StagingTableInfo getStagingTableById(String stagingTableId) {
+    LOGGER.debug("Getting staging table by id: " + stagingTableId);
+    try (Session session = SESSION_FACTORY.openSession()) {
+      StagingTableDAO stagingTableDAO =
+          session.get(StagingTableDAO.class, UUID.fromString(stagingTableId));
+      if (stagingTableDAO == null) {
+        throw new BaseException(ErrorCode.NOT_FOUND, "Staging table not found: " + stagingTableId);
+      }
+      return stagingTableDAO.toStagingTableInfo();
+    }
+  }
+
+  public StagingTableDAO findByStagingLocation(Session session, String stagingLocation) {
+    String hql = "FROM StagingTableDAO t WHERE t.stagingLocation = :stagingLocation";
+    Query<StagingTableDAO> query = session.createQuery(hql, StagingTableDAO.class);
+    query.setParameter("stagingLocation", stagingLocation);
+    return query.uniqueResult(); // Returns null if no result is found
+  }
+
+  public StagingTableDAO findByTableName(Session session, UUID schemaId, String tableName) {
+    String hql = "FROM StagingTableDAO t WHERE t.schemaId = :schemaId AND t.name = :tableName";
+    Query<StagingTableDAO> query = session.createQuery(hql, StagingTableDAO.class);
+    query.setParameter("schemaId", schemaId);
+    query.setParameter("tableName", tableName);
+    return query.uniqueResult(); // Returns null if no result is found
+  }
+
+  public StagingTableInfo createStagingTable(CreateStagingTable createStagingTable) {
+    StagingTableInfo stagingTableInfo = StagingTableDAO.fromCreateTableRequest(createStagingTable);
+    if (stagingTableInfo.getId() != null || stagingTableInfo.getStagingLocation() != null) {
+      throw new BaseException(
+          ErrorCode.INVALID_ARGUMENT,
+          "Table id should not be provided for creating a new staging table");
+    }
+    StagingTableDAO stagingTableDAO = new StagingTableDAO();
+    try (Session session = SESSION_FACTORY.openSession()) {
+      Transaction tx = session.beginTransaction();
+      try {
+        // check if catalog and schema exist first
+        UUID schemaId =
+            RepositoryUtils.getSchemaId(
+                session, stagingTableInfo.getCatalogName(), stagingTableInfo.getSchemaName());
+        // check if staging table or table by the same name already exists
+        StagingTableDAO existingStagingTable =
+            findByTableName(session, schemaId, stagingTableInfo.getName());
+        if (existingStagingTable != null) {
+          throw new BaseException(
+              ErrorCode.ALREADY_EXISTS,
+              "Staging table already exists: " + stagingTableInfo.getName());
+        }
+        TableInfoDAO existingTable =
+            findBySchemaIdAndName(session, schemaId, stagingTableInfo.getName());
+        if (existingTable != null) {
+          throw new BaseException(
+              ErrorCode.ALREADY_EXISTS, "Table already exists: " + stagingTableInfo.getName());
+        }
+
+        UUID tableId = UUID.randomUUID();
+        // set table id in staging table info
+        stagingTableInfo.setId(tableId.toString());
+        String stagingLocation = getEntityPath(stagingTableInfo);
+        stagingTableInfo.setStagingLocation(stagingLocation);
+        StagingTableDAO existing = findByStagingLocation(session, stagingLocation);
+        if (existing != null) {
+          throw new BaseException(
+              ErrorCode.ALREADY_EXISTS, "Staging table already exists: " + stagingLocation);
+        }
+        stagingTableDAO.setId(tableId);
+        stagingTableDAO.setSchemaId(schemaId);
+        stagingTableDAO.setName(stagingTableInfo.getName());
+        stagingTableDAO.setStagingLocation(stagingLocation);
+        stagingTableDAO.setDefaultFields();
+        session.persist(stagingTableDAO);
+        tx.commit();
+      } catch (RuntimeException e) {
+        if (tx != null && tx.getStatus().canRollback()) {
+          tx.rollback();
+        }
+        throw e;
+      }
+    }
+    return stagingTableInfo;
+  }
+
   public TableInfo getTableById(String tableId) {
     LOGGER.debug("Getting table by id: " + tableId);
     try (Session session = SESSION_FACTORY.openSession()) {
@@ -42,6 +142,7 @@ public class TableRepository {
       Transaction tx = session.beginTransaction();
       try {
         TableInfoDAO tableInfoDAO = session.get(TableInfoDAO.class, UUID.fromString(tableId));
+
         if (tableInfoDAO == null) {
           throw new BaseException(ErrorCode.NOT_FOUND, "Table not found: " + tableId);
         }
@@ -118,7 +219,7 @@ public class TableRepository {
             .tableType(createTable.getTableType())
             .dataSourceFormat(createTable.getDataSourceFormat())
             .columns(columnInfos)
-            .storageLocation(FileUtils.convertRelativePathToURI(createTable.getStorageLocation()))
+            .storageLocation(FileUtils.toStandardizedURIString(createTable.getStorageLocation()))
             .comment(createTable.getComment())
             .properties(createTable.getProperties())
             .createdAt(System.currentTimeMillis());
@@ -138,17 +239,55 @@ public class TableRepository {
         if (existingTable != null) {
           throw new BaseException(ErrorCode.ALREADY_EXISTS, "Table already exists: " + fullName);
         }
-        if (TableType.MANAGED.equals(tableInfo.getTableType())) {
-          throw new BaseException(
-              ErrorCode.INVALID_ARGUMENT, "MANAGED table creation is not supported yet.");
-        }
-        // only external table creation is supported at this time
-        if (tableInfo.getStorageLocation() == null) {
-          throw new BaseException(
-              ErrorCode.INVALID_ARGUMENT, "Storage location is required for external table");
-        }
         TableInfoDAO tableInfoDAO = TableInfoDAO.from(tableInfo);
         tableInfoDAO.setSchemaId(schemaId);
+        String tableId = UUID.randomUUID().toString();
+        if (TableType.MANAGED.equals(tableInfo.getTableType())
+            && DataSourceFormat.DELTA.equals(tableInfo.getDataSourceFormat())) {
+          if (tableInfo.getStorageLocation() == null)
+            throw new BaseException(
+                ErrorCode.INVALID_ARGUMENT, "Storage location is required for managed delta table");
+          // Find staging table with the same staging location
+          StagingTableDAO stagingTableDAO =
+              findByStagingLocation(session, tableInfo.getStorageLocation());
+          if (stagingTableDAO != null) {
+            // Set the same id for table
+            String stagingTableId = stagingTableDAO.getId().toString();
+            // Commit the staging table
+            if (stagingTableDAO.isStageCommitted()) {
+              throw new BaseException(
+                  ErrorCode.FAILED_PRECONDITION,
+                  "Staging table already committed: " + tableInfo.getStorageLocation());
+            }
+            stagingTableDAO.setStageCommitted(true);
+            stagingTableDAO.setStageCommittedAt(new Date());
+            stagingTableDAO.setAccessedAt(new Date());
+            session.persist(stagingTableDAO);
+            tableId = UUID.fromString(stagingTableId).toString();
+            tableInfoDAO.setUrl(tableInfo.getStorageLocation());
+          } else {
+            throw new BaseException(
+                ErrorCode.NOT_FOUND, "Staging table not found: " + tableInfo.getStorageLocation());
+          }
+        } else if (TableType.MANAGED.equals(tableInfo.getTableType())) {
+          // creating a new table location and setting that as the url
+          String tableLocation = FileUtils.createTableDirectory(tableId);
+          // set location in both tableInfo and tableInfoDAO
+          tableInfoDAO.setUrl(tableLocation);
+          tableInfo.setStorageLocation(tableLocation);
+        } else {
+          if (tableInfo.getStorageLocation() == null)
+            throw new BaseException(
+                ErrorCode.INVALID_ARGUMENT, "Storage location is required for external table");
+          tableInfoDAO.setUrl(tableInfo.getStorageLocation());
+        }
+        // set id (either existing staging table id or new table id)
+        tableInfoDAO.setId(UUID.fromString(tableId));
+        // set table id in return object
+        tableInfo.setTableId(tableId);
+        // set created and updated time in return object
+        tableInfo.setCreatedAt(tableInfoDAO.getCreatedAt().getTime());
+        tableInfo.setUpdatedAt(tableInfoDAO.getUpdatedAt().getTime());
         // create columns
         tableInfoDAO
             .getColumns()

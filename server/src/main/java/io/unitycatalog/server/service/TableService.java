@@ -14,8 +14,6 @@ public class TableService {
 
   private static final TableRepository TABLE_REPOSITORY = TableRepository.getInstance();
 
-  public TableService() {}
-
   @Post("")
   public HttpResponse createTable(CreateTable createTable) {
     assert createTable != null;

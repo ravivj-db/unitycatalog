@@ -44,7 +44,7 @@ public class VolumeInfoDAO extends IdentifiableDAO {
         .volumeId(getId().toString())
         .name(getName())
         .comment(comment)
-        .storageLocation(FileUtils.convertRelativePathToURI(storageLocation))
+        .storageLocation(FileUtils.toStandardizedURIString(storageLocation))
         .createdAt(createdAt.getTime())
         .updatedAt(updatedAt.getTime())
         .volumeType(VolumeType.valueOf(volumeType));
