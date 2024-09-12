@@ -20,22 +20,15 @@ public class FileUtilsTest {
 
     String tablePath = FileUtils.createTableDirectory(tableId);
 
-    assertThat(tablePath).isEqualTo("file:///tmp/tables/" + tableId + "/");
-
-    FileUtils.deleteDirectory(tablePath);
+    assertThat(tablePath).isEqualTo("file:///tmp/tables/" + tableId);
 
     System.setProperty("storageRoot", "file:///tmp/random");
 
     tablePath = FileUtils.createTableDirectory(tableId);
 
-    assertThat(tablePath).isEqualTo("file:///tmp/random/tables/" + tableId + "/");
+    assertThat(tablePath).isEqualTo("file:///tmp/random/tables/" + tableId);
 
-    FileUtils.deleteDirectory(tablePath);
-
-    assertThatThrownBy(
-            () ->
-                FileUtils.createTableDirectory(
-                    new StagingTableInfo().catalogName("..").schemaName("schema").name("table")))
+    assertThatThrownBy(() -> FileUtils.createTableDirectory(new StagingTableInfo().id("..")))
         .isInstanceOf(BaseException.class);
 
     assertThatThrownBy(

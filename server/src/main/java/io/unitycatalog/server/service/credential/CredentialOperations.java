@@ -30,8 +30,7 @@ public class CredentialOperations {
     this.gcpCredentialVendor = new GcpCredentialVendor();
   }
 
-  public GenerateTemporaryTableCredentialResponse vendCredentialForTable(TableInfo table, Set<CredentialContext.Privilege> privileges) {
-    String tableStorageLocation = table.getStorageLocation();
+  public GenerateTemporaryTableCredentialResponse vendCredentialForTable(String tableStorageLocation, Set<CredentialContext.Privilege> privileges) {
     if (tableStorageLocation == null || tableStorageLocation.isEmpty()) {
       throw new BaseException(ErrorCode.FAILED_PRECONDITION, "Table storage location not found.");
     }

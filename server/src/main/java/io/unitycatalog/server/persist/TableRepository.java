@@ -37,7 +37,7 @@ public class TableRepository {
   }
 
   private String getEntityPath(StagingTableInfo tableInfo) {
-    return FileUtils.createTableDirectory(tableInfo).toString();
+    return FileUtils.createTableDirectory(tableInfo);
   }
 
   public StagingTableInfo getStagingTable(String stagingPath) {
@@ -219,7 +219,7 @@ public class TableRepository {
             .tableType(createTable.getTableType())
             .dataSourceFormat(createTable.getDataSourceFormat())
             .columns(columnInfos)
-            .storageLocation(FileUtils.convertRelativePathToURI(createTable.getStorageLocation()))
+            .storageLocation(FileUtils.toStandardizedURIString(createTable.getStorageLocation()))
             .comment(createTable.getComment())
             .properties(createTable.getProperties())
             .createdAt(System.currentTimeMillis());

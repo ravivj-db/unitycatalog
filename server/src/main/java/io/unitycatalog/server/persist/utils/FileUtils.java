@@ -10,11 +10,12 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import io.unitycatalog.server.exception.BaseException;
 import io.unitycatalog.server.exception.ErrorCode;
-import io.unitycatalog.server.model.*;
+import io.unitycatalog.server.model.StagingTableInfo;
 import io.unitycatalog.server.utils.Constants;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -35,7 +36,10 @@ public class FileUtils {
   }
 
   private static String getDirectoryURI(String entityFullName) {
-    return getStorageRoot() + "/" + entityFullName.replace(".", "/");
+    String absoluteDirectoryPath = getStorageRoot() + "/" + entityFullName.replace(".", "/");
+    String standardizedUri = toStandardizedURIString(absoluteDirectoryPath);
+    validateURI(standardizedUri);
+    return standardizedUri;
   }
 
   public static String createVolumeDirectory(String volumeName) {
@@ -43,31 +47,28 @@ public class FileUtils {
     return createDirectory(absoluteUri).toString();
   }
 
-  public static URI createTableDirectory(StagingTableInfo stagingTableInfo) {
-    return URI.create(createTableDirectory(stagingTableInfo.getId()));
+  public static String createTableDirectory(StagingTableInfo stagingTableInfo) {
+    return createTableDirectory(stagingTableInfo.getId());
   }
 
   public static String createTableDirectory(String tableId) {
-    String absoluteUri = getDirectoryURI("tables." + tableId);
-    return createDirectory(absoluteUri).toString();
+    String fileDirectoryUri = getDirectoryURI("tables." + tableId);
+    // TODO : actual table directory creation will be handler in the future
+    // createDirectory(fileDirectoryUri);
+    return fileDirectoryUri;
   }
 
   private static URI createDirectory(String uri) {
     URI parsedUri = createURI(uri);
-    validateURI(parsedUri);
     if (uri.startsWith("s3://")) {
       return modifyS3Directory(parsedUri, true);
     } else {
-      return adjustFileUri(createLocalDirectory(Paths.get(parsedUri)));
+      return createLocalDirectory(Paths.get(parsedUri));
     }
   }
 
   private static URI createURI(String uri) {
-    if (uri.startsWith("s3://") || uri.startsWith("file:")) {
-      return URI.create(uri);
-    } else {
-      return Paths.get(uri).toUri();
-    }
+    return Paths.get(uri).toUri();
   }
 
   private static URI createLocalDirectory(Path dirPath) {
@@ -175,29 +176,39 @@ public class FileUtils {
     }
   }
 
-  private static URI adjustFileUri(URI fileUri) {
-    String uriString = fileUri.toString();
-    // Ensure the URI starts with "file:///" for absolute paths
-    if (uriString.startsWith("file:/") && !uriString.startsWith("file:///")) {
-      uriString = "file://" + uriString.substring(5);
-    }
-    return URI.create(uriString);
+  private static String adjustFileUri(String fileUri) {
+    URI uri = URI.create(fileUri);
+    String path = uri.getPath(); // Path part
+    // Always ensure "file:///" format for localhost file URIs
+    return "file:///" + (path != null ? (path.startsWith("/") ? path.substring(1) : path) : "");
   }
 
-  public static String convertRelativePathToURI(String url) {
-    if (url == null) {
-      return null;
+  public static String toStandardizedURIString(String inputPath) {
+    try {
+      // Check if the path is already a URI with a valid scheme
+      URI uri = new URI(inputPath);
+      if (uri.getScheme() != null) {
+        // If it's a file URI, standardize it
+        if ("file".equalsIgnoreCase(uri.getScheme())) {
+          return adjustFileUri(uri.toString());
+        } else if (Constants.SUPPORTED_SCHEMES.contains(uri.getScheme())) {
+          return uri.toString();
+        } else
+          throw new BaseException(
+              ErrorCode.INVALID_ARGUMENT, "Unsupported URI scheme: " + uri.getScheme());
+      }
+    } catch (URISyntaxException e) {
+      // Not a valid URI, treat it as a file path
     }
-    if (isSupportedCloudStorageUri(url)) {
-      return url;
-    } else {
-      return adjustFileUri(createURI(url)).toString();
-    }
+
+    // Handle local file paths (absolute or relative)
+    URI uri = Paths.get(inputPath).toUri();
+    return uri.toString();
   }
 
-  public static boolean isSupportedCloudStorageUri(String url) {
-    String scheme = URI.create(url).getScheme();
-    return scheme != null && Constants.SUPPORTED_SCHEMES.contains(scheme);
+  private static void validateURI(String uri) {
+    URI parsedUri = URI.create(uri);
+    validateURI(parsedUri);
   }
 
   private static void validateURI(URI uri) {

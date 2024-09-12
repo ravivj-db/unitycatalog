@@ -18,19 +18,7 @@ import io.unitycatalog.server.exception.GlobalExceptionHandler;
 import io.unitycatalog.server.persist.utils.ServerPropertiesUtils;
 import io.unitycatalog.server.security.SecurityConfiguration;
 import io.unitycatalog.server.security.SecurityContext;
-import io.unitycatalog.server.service.AuthDecorator;
-import io.unitycatalog.server.service.AuthService;
-import io.unitycatalog.server.service.CatalogService;
-import io.unitycatalog.server.service.FunctionService;
-import io.unitycatalog.server.service.IcebergRestCatalogService;
-import io.unitycatalog.server.service.ModelService;
-import io.unitycatalog.server.service.SchemaService;
-import io.unitycatalog.server.service.Scim2UserService;
-import io.unitycatalog.server.service.TableService;
-import io.unitycatalog.server.service.TemporaryModelVersionCredentialsService;
-import io.unitycatalog.server.service.TemporaryTableCredentialsService;
-import io.unitycatalog.server.service.TemporaryVolumeCredentialsService;
-import io.unitycatalog.server.service.VolumeService;
+import io.unitycatalog.server.service.*;
 import io.unitycatalog.server.service.credential.CredentialOperations;
 import io.unitycatalog.server.service.iceberg.FileIOFactory;
 import io.unitycatalog.server.service.iceberg.MetadataService;
@@ -108,6 +96,7 @@ public class UnityCatalogServer {
     SchemaService schemaService = new SchemaService();
     VolumeService volumeService = new VolumeService();
     TableService tableService = new TableService();
+    StagingTableService stagingTableService = new StagingTableService();
     FunctionService functionService = new FunctionService();
     ModelService modelService = new ModelService();
     TemporaryTableCredentialsService temporaryTableCredentialsService =
@@ -127,6 +116,7 @@ public class UnityCatalogServer {
         .annotatedService(basePath + "schemas", schemaService, unityConverterFunction)
         .annotatedService(basePath + "volumes", volumeService, unityConverterFunction)
         .annotatedService(basePath + "tables", tableService, unityConverterFunction)
+        .annotatedService(basePath + "staging-tables", stagingTableService, unityConverterFunction)
         .annotatedService(basePath + "functions", functionService, unityConverterFunction)
         .annotatedService(basePath + "models", modelService, unityConverterFunction)
         .annotatedService(
